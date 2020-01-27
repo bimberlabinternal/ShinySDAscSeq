@@ -134,12 +134,9 @@ ui <- dashboardPage(skin="red",
                   
                   textInput("ComponentNtext", "Numerical input:", "1"),
                   textInput("Genetext", "Text input:", "CD69"),
-                  radioButtons("data", "Data origin:",
+                  radioButtons("data", "Data origin:",  # ADD or REMOVE depending on what is in the data
                                c("tSNE - Batch-removed SDA-CellScores" = "tsneBrSDACS",
                                  "tSNE - Original SDA-CellScores" = "tsneDSNDGE",
-                                 #"Batch-removed-Imputed-DGE" = "DGEimp",
-                                 #"DromSim-Normalized-DGE" = "DGEnorm",
-                                 #"tSNE - Seurat-Norm. DGE" = "tsneSNDGE",
                                  "tSNE - Batch-removed-Imputed-SER-DGE" = "tsneImpDGE"
                                  )),
                   radioButtons("metaselect", "Metadata Selection:",
@@ -285,58 +282,15 @@ ui <- dashboardPage(skin="red",
 
 server <- function(input, output, session) {
   
+  
   datat <- as.data.frame(cbind(datat, results$scores[rownames(datat),])); rownames(datat) <- datat$barcode 
   
-
-  # ColFac_DONR.ID  <- as.data.frame(datat)[rownames(results$scores), ]$EXP.ID
-  
   datat <- data.table(datat)
-  
-  # ColFacDI <- reactive({
-  # if(input$metaselect == "SubjectId") {
-  #   ColFac_DONR.ID <- sort(as.character(datat$SubjectId))
-  #   names(ColFac_DONR.ID) <- rownames(datat)[order(datat$SubjectId)]
-  #   
-  #   ColFac_DONR.ID
-  # } else {
-  #   if(input$metaselect == "SampleDate"){
-  #     ColFac_DONR.ID <- sort(as.character(datat$SampleDate))
-  #     names(ColFac_DONR.ID) <- rownames(datat)[order(datat$SampleDate)]
-  #     
-  #   } else {
-  #     if(input$metaselect == "CustClus"){
-  #       ColFac_DONR.ID <- sort(as.character(datat$CustClus))
-  #       names(ColFac_DONR.ID) <- rownames(datat)[order(datat$CustClus)]
-  #       
-  #     } else {
-  #       if(input$metaselect == "CustClus2"){
-  #         ColFac_DONR.ID <- sort(as.character(datat$CustClus2))
-  #         names(ColFac_DONR.ID) <- rownames(datat)[order(datat$CustClus2)]
-  #         
-  #       } else {
-  #         if(input$metaselect == "BarcodePrefix"){
-  #           ColFac_DONR.ID <- sort(as.character(datat$BarcodePrefix))
-  #           names(ColFac_DONR.ID) <- rownames(datat)[order(datat$BarcodePrefix)]
-  #           
-  #         } else {
-  #           if(input$metaselect == "SingleR_Labels"){
-  #             ColFac_DONR.ID <- sort(as.character(datat$SingleR_Labels))
-  #             names(ColFac_DONR.ID) <- rownames(datat)[order(datat$SingleR_Labels)]
-  #             
-  #           } else {
-  # 
-  #           }
-  #         }
-  #       }
-  #     }
-  #   }
-  # }
-  #   ColFac_DONR.ID
-  # })
   
   
   
   ScoreAcrossDT <- reactive({
+    #these depend on metadata 
     
     if(input$metaselect == "SubjectId") {
       ColFac_DONR.ID <- sort(as.character(datat$SubjectId))
@@ -377,7 +331,7 @@ server <- function(input, output, session) {
       }
     }
     
-    # ColFac_DONR.ID <- ColFacDI()
+
     
     SDAScores <- results$scores
     ComponentN <- as.numeric(input$ComponentNtext)
@@ -395,15 +349,9 @@ server <- function(input, output, session) {
   
   
   
-  
-  # SDALoadings <- results$loadings[[1]]
-  
-  # print(input$data)
-  
+
   tDF <- reactive({
-    # data, tsneBrSDACS, tsneDSNDGE, tsneSNDGE
-    # print(input$data)
-    
+
     
     if(input$data == "tsneBrSDACS") {
       tempDF <- as.data.frame(datat)[, c("Tsne1_SDAQC2", "Tsne2_SDAQC2")]; colnames(tempDF) <- c("tSNE1", "tSNE2")
@@ -432,25 +380,7 @@ server <- function(input, output, session) {
   })
   
 
-  
-  # observe({
-  # 
-  #   # print(input$data)
-  #   tempDF <- tDF()
-  #   print(head(tempDF))
-  # 
-  # 
-  # 
-  # })
-  # observe({
-  #   
-  #   Val <- as.character(min(c(40, as.numeric(input$ComponentNtext)+1)))
-  # 
-  #   updateTextInput(session, "ComponentNtext", value = Val)
-  # 
-  # 
-  # })
-  observeEvent(input$NextSDA, {
+    observeEvent(input$NextSDA, {
     Val <- as.character(min(c(40, as.numeric(input$ComponentNtext)+1)))
     
     updateTextInput(session, "ComponentNtext", value = Val)
@@ -466,16 +396,10 @@ server <- function(input, output, session) {
  
     
     Out1 <- print_gene_list(as.numeric(input$ComponentNtext), PosOnly = T) %>%
-      #group_by(package) %>%
-      #tally() %>%
-      #arrange(desc(n), tolower(package)) %>%
-      #mutate(percentage = n / nrow(pkgData()) * 100) %>%
-      #select("Package name" = package, "% of downloads" = percentage) %>%
       as.data.frame() %>%
       head(as.numeric(input$NoOfGenes)) 
     Out1 <- Out1$Gene.Name
     
-    # print(Out1)
     clipr::write_clip(Out1)
     
   })
@@ -483,59 +407,26 @@ server <- function(input, output, session) {
   
     
     Out2 <- print_gene_list(as.numeric(input$ComponentNtext), NegOnly = T) %>%
-      #group_by(package) %>%
-      #tally() %>%
-      #arrange(desc(n), tolower(package)) %>%
-      #mutate(percentage = n / nrow(pkgData()) * 100) %>%
-      #select("Package name" = package, "% of downloads" = percentage) %>%
+
       as.data.frame() %>%
       head(as.numeric(input$NoOfGenes)) 
     Out2 <- Out2$Gene.Name
     
-    # print(Out1)
     clipr::write_clip(Out2)
     
   })
   
   
-  # observe({
-  #   
-  #   #updateSliderInput(session, "ComponentN", value = as.numeric(input$ComponentNtext))
-  #   
-  #   # if(input$chbx1 == T){ 
-  #   #   #nada
-  #   # } else {
-  #   #   #nada
-  #   # }
-  # })
-  
-  # observe({
-  # 
-  #   # This will change the value of input$inText, based on TextCompN
-  #   updateTextInput(session, "ComponentNtext", value = input$ComponentN)
-  # 
-  # 
-  # 
-  # })
+
   
   output$packageTablePos <- renderTable({
     print_gene_list(as.numeric(input$ComponentNtext), PosOnly = T) %>%
-      #group_by(package) %>%
-      #tally() %>%
-      #arrange(desc(n), tolower(package)) %>%
-      #mutate(percentage = n / nrow(pkgData()) * 100) %>%
-      #select("Package name" = package, "% of downloads" = percentage) %>%
       as.data.frame() %>%
       head(as.numeric(input$NoOfGenes))
   }, digits = 1)
   
   output$packageTableNeg <- renderTable({
     print_gene_list(as.numeric(input$ComponentNtext), NegOnly = T) %>%
-      #group_by(package) %>%
-      #tally() %>%
-      #arrange(desc(n), tolower(package)) %>%
-      #mutate(percentage = n / nrow(pkgData()) * 100) %>%
-      #select("Package name" = package, "% of downloads" = percentage) %>%
       as.data.frame() %>%
       head(as.numeric(input$NoOfGenes))
   }, digits = 1)
@@ -561,10 +452,10 @@ server <- function(input, output, session) {
     }
     
     valueBox(
-      value = GeneName, #format(Sys.time(), "%a %b %d %X %Y %Z"),
+      value = GeneName, 
       subtitle = "Gene Name",
       icon = icon("area-chart"),
-      color = "yellow" #if (downloadRate >= input$rateThreshold) "yellow" else "aqua"
+      color = "yellow" 
     )
   })
   
@@ -688,8 +579,7 @@ server <- function(input, output, session) {
 
     }
     #ggplotly
-    #as.numeric(input$NoOfGenes)
-    
+
     LoadOrdVal <- round(results$loadings[[1]][,as.character(input$Genetext)][order(abs(results$loadings[[1]][,as.character(input$Genetext)]), decreasing = T)], 3)
     
 
@@ -817,7 +707,8 @@ server <- function(input, output, session) {
     # N = total number of genes (usually not entire genome, since many have unk func)
     N=8025
     # k = number of genes submitted, top 100
-    k = 40 #100
+    k = 40 #100 #needs stats thinking and adjustment to improve enrichment calls # maybe change to dynamically genes sumbited and in universe/data
+    
     GeneSet <- input$GeneSet
     if(length(grep(",", GeneSet)) == 0){
       
@@ -855,7 +746,6 @@ server <- function(input, output, session) {
     # k = number of genes submitted, top 100
     k = 40 #100, correction needed
     GeneSet <- input$GeneSet
-    #GeneSet <- "'PRM1', 'SPATA42', 'SPRR4', 'NUPR2', 'HBZ', 'DYNLL2'"
 
     
     if(length(grep(",", GeneSet)) == 0){
@@ -871,12 +761,9 @@ server <- function(input, output, session) {
       GeneSet <- (unlist(strsplit(gsub(" ", "", gsub("'", '', gsub('"', '', GeneSet))), ",")))
       #print(GeneSet)
     }
-    
-    # print("length of your genes:")
-    # print(length(GeneSet))
+
     GeneSet <- GeneSet[GeneSet %in% colnames(results$loadings[[1]][,])]
-    # print("length of your genes in this dataset:")
-    # print(length(GeneSet))
+
     
     plotEnrich(GeneSetsDF=SDA_Top100neg, 
                GeneVec = GeneSet, 

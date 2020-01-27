@@ -1,3 +1,6 @@
+# these fx need proper citation. They are collected from here and there and customized as needed.
+
+
 genome_loadings <- function (component = NULL, max.items = 20, label.size = 3, label.repel = 1, 
           label_both = TRUE, label_X = FALSE, min_loading = 0.01, gene_locations = NULL, 
           chromosome_lengths = NULL, hide_unknown = FALSE, highlight_genes = NULL, 

@@ -1,11 +1,10 @@
 
-# Human Infertility Single_cell Testis Atlas (HISTA)
+# ShinySDAscSeq (ShinSASe): A Shiny template for scRNASeq analysis processed with SDA
 
 library(shiny)
 library(rclipboard)
 library(shinydashboard)
 
-# library(SDAtools)
 library(shiny)
 library(ggplot2)
 library(data.table)
@@ -20,25 +19,17 @@ library(dplyr)
 source("./Fxs.R")
 
 
-list2env(readRDS( "./data/ShinyServerLSV1.rds"), envir = globalenv())
+list2env(readRDS( "./data/ShinyServerDataLS.rds"), envir = globalenv())
 
-# quantile(table(datat$CloneNames), .75)
-datat$CloneNames2 <- datat$CloneNames
-datat$CloneNames2[datat$CloneNames2 %in% names(which(table(datat$CloneNames)<20))] <- "low"
-# table(datat$CloneNames2)
+#ShinyServerDataLS is a list of data:
 
-SDA_Top100pos <- (as.data.frame(lapply(1:40, function(xN){
-  as.data.frame(print_gene_list(xN, PosOnly = T, NegOnly = F))[1:40,1]
-})))
-colnames(SDA_Top100pos) <- paste0("SDAV", 1:40)
-colnames(SDA_Top100pos) <- paste0(colnames(SDA_Top100pos), "_" , StatFac$Lab)
-
-SDA_Top100neg <- (as.data.frame(lapply(1:40, function(xN){
-  as.data.frame(print_gene_list(xN, PosOnly = F, NegOnly = T))[1:40,1]
-})))
-colnames(SDA_Top100neg) <- paste0("SDAV", 1:40)
-colnames(SDA_Top100neg) <- paste0(colnames(SDA_Top100neg), "_" , StatFac$Lab)
-
+#"datat" a dataframe with cell barcode + meta data including 1 dimreduc (x,y) like tsne. The other paramters differ per study so custom.
+#"results" : an SDA object post processing and label correction holds the cell scores and gene loading
+#"chromosome.lengths" : a dataframe with "chromosome", "length", "length_padded", "genomic_offset", "center" from mapping genes to biomart
+#"StatFac": A dataframe of "SDA" comp and annotations found in processing, labels to be shown when a comp is selected
+#"GO_data": a list of GO annotations, 1 per every component in the resuts
+#"gene_locations": from biomart
+#"col_vector" : vector of colors to be used
 
 
 

@@ -18,47 +18,7 @@ library(dplyr)
 
 source("./Fxs.R")
 
-lookup.path <- "../../../Expts/TetCombo2/data"
-SerObj.paths <- list.files(lookup.path, full.names = T)[grepl('FinalSerObj', list.files(lookup.path))]
-SerObj.2load = 1
 
-SerObj.ShinySDAOut <- readRDS(SerObj.paths[SerObj.2load])
-
-CellScores   <- SerObj.ShinySDAOut@reductions$SDA@cell.embeddings
-GeneLoadings <- t(SerObj.ShinySDAOut@reductions$SDA@feature.loadings)
-
-MetaDF      <- SerObj.ShinySDAOut@misc$SDA_processing_results$MetaDF
-
-# names(SerObj.ShinySDAOut@misc$SDA_processing_results)
-# names(SerObj.ShinySDAOut@reductions$SDA@misc)
-
-
-
-GO_data             <- SerObj.ShinySDAOut@misc$SDA_processing_results$GO_data
-chromosome.lengths  <- SerObj.ShinySDAOut@misc$SDA_processing_results$chromosome.lengths
-gene_locations      <- SerObj.ShinySDAOut@misc$SDA_processing_results$gene_locations
-Remove_comps        <- as.numeric(SerObj.ShinySDAOut@misc$SDA_processing_results$Remove_comps)
-Keep_comps          <- setdiff(1:ncol(CellScores), Remove_comps)
-SDA_TopNpos             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNpos
-SDA_TopNneg             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNneg
-TopN                    <- SerObj.ShinySDAOut@misc$SDA_processing_results$TopN
-
-
-
-MetaDF$tsne1_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,1]
-MetaDF$tsne2_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,2]
-
-MetaDF$tsne1_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,1]
-MetaDF$tsne2_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,2]
-StatFac <- data.frame(ord=1:ncol(CellScores), Name=colnames(CellScores), row.names = colnames(CellScores))
-StatFac$Meta1 <- rep(0, nrow(StatFac))
-StatFac$Meta2 <- rep(0, nrow(StatFac))
-StatFac$Meta3 <- rep(0, nrow(StatFac))
-StatFac$Meta4 <- rep(0, nrow(StatFac))
-StatFac$Meta5 <- rep(0, nrow(StatFac))
-StatFac$Meta6 <- rep(0, nrow(StatFac))
-
-col_vector <- OOSAP::ColorTheme()$col_vector
 
 # list2env(readRDS( "./data/ShinyServerDataLS.rds"), envir = globalenv())
 
@@ -324,9 +284,47 @@ ui <- dashboardPage(skin="red",
 server <- function(input, output, session) {
   
   
-  # MetaDF <- as.data.frame(cbind(MetaDF, CellScores[rownames(MetaDF),])); rownames(MetaDF) <- MetaDF$barcode 
-  # 
-  # MetaDF <- data.table(MetaDF)
+  lookup.path <- "../../../Expts/TetCombo2/data"
+  SerObj.paths <- list.files(lookup.path, full.names = T)[grepl('FinalSerObj', list.files(lookup.path))]
+  SerObj.2load = 1
+  
+  SerObj.ShinySDAOut <- readRDS(SerObj.paths[SerObj.2load])
+  
+  CellScores   <- SerObj.ShinySDAOut@reductions$SDA@cell.embeddings
+  GeneLoadings <- t(SerObj.ShinySDAOut@reductions$SDA@feature.loadings)
+  
+  MetaDF      <- SerObj.ShinySDAOut@misc$SDA_processing_results$MetaDF
+  
+  # names(SerObj.ShinySDAOut@misc$SDA_processing_results)
+  # names(SerObj.ShinySDAOut@reductions$SDA@misc)
+  
+  
+  
+  GO_data             <- SerObj.ShinySDAOut@misc$SDA_processing_results$GO_data
+  chromosome.lengths  <- SerObj.ShinySDAOut@misc$SDA_processing_results$chromosome.lengths
+  gene_locations      <- SerObj.ShinySDAOut@misc$SDA_processing_results$gene_locations
+  Remove_comps        <- as.numeric(SerObj.ShinySDAOut@misc$SDA_processing_results$Remove_comps)
+  Keep_comps          <- setdiff(1:ncol(CellScores), Remove_comps)
+  SDA_TopNpos             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNpos
+  SDA_TopNneg             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNneg
+  TopN                    <- SerObj.ShinySDAOut@misc$SDA_processing_results$TopN
+  
+  
+  
+  MetaDF$tsne1_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,1]
+  MetaDF$tsne2_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,2]
+  
+  MetaDF$tsne1_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,1]
+  MetaDF$tsne2_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,2]
+  StatFac <- data.frame(ord=1:ncol(CellScores), Name=colnames(CellScores), row.names = colnames(CellScores))
+  StatFac$Meta1 <- rep(0, nrow(StatFac))
+  StatFac$Meta2 <- rep(0, nrow(StatFac))
+  StatFac$Meta3 <- rep(0, nrow(StatFac))
+  StatFac$Meta4 <- rep(0, nrow(StatFac))
+  StatFac$Meta5 <- rep(0, nrow(StatFac))
+  StatFac$Meta6 <- rep(0, nrow(StatFac))
+  
+  col_vector <- OOSAP::ColorTheme()$col_vector
   
   
   
@@ -637,7 +635,7 @@ server <- function(input, output, session) {
     if(! (as.numeric(input$ComponentNtext) %in% 1:40)){
       print("No GO")
     } else {
-      go_volcano_plot(component = paste("V", input$ComponentNtext, "P", sep=""))+ theme_bw()+ theme(aspect.ratio = 1)
+      go_volcano_plot(x=GO_data, component = paste("V", input$ComponentNtext, "P", sep=""))+ theme_bw()+ theme(aspect.ratio = 1)
       
     }
     
@@ -649,7 +647,7 @@ server <- function(input, output, session) {
     if(! (as.numeric(input$ComponentNtext) %in% 1:40)){
       print("No GO")
     } else {
-      go_volcano_plot(component = paste("V", input$ComponentNtext, "N", sep=""))+ theme_bw()+ theme(aspect.ratio = 1)
+      go_volcano_plot(x=GO_data, component = paste("V", input$ComponentNtext, "N", sep=""))+ theme_bw()+ theme(aspect.ratio = 1)
       
     }
     

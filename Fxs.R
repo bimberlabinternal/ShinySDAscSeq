@@ -4,11 +4,21 @@
 genome_loadings <- function (component = NULL, max.items = 20, label.size = 3, label.repel = 1, 
           label_both = TRUE, label_X = FALSE, min_loading = 0.01, gene_locations = NULL, 
           chromosome_lengths = NULL, hide_unknown = FALSE, highlight_genes = NULL, 
-          label_genes = NULL) 
+          label_genes = NULL, GeneLoadings = GeneLoadings) 
 {
+  # component = GeneLoadings[1,]
+  
+  # label_both = T; 
+  # max.items = 10; 
+  # gene_locations =   gene_locations;
+  # chromosome_lengths = chromosome.lengths; 
+  # GeneLoadings = GeneLoadings
+  
+  
   temp <- data.table(loading = component, gene_symbol = names(component))
+  
   if (is.null(gene_locations)) {
-    gene_locations <- load_gene_locations(colnames(results$loadings[[1]]))
+    gene_locations <- load_gene_locations(colnames(GeneLoadings))
   }
   if (is.null(chromosome_lengths)) {
     message("Using mmusculus_gene_ensembl chromosome lengths")
@@ -68,44 +78,44 @@ genome_loadings <- function (component = NULL, max.items = 20, label.size = 3, l
 
 
 
-print_loadings_scores <- function(SDAResult = NA, ComponentN=NA, ColFac = NA, Prefix="SDAV", GeneLoc=NA,
-                                  chromosome.lengths = chromosome.lengths){
-  library(ggthemes)
-  library(scales)
-  if(!is.factor(ColFac)) ColFac <- factor(ColFac)
-  
-  SDAScores    <- SDAResult$scores
-  SDALoadings <- SDAResult$loadings[[1]]
-  
-  
-  #cowplot::plot_grid(
-  g1 <- ggplot(data.table(cell_index = 1:nrow(SDAScores), 
-                          score = SDAScores[, paste0(Prefix, ComponentN)], experiment = gsub("_.*", 
-                                                                                             "", gsub("[A-Z]+\\.", "", rownames(SDAScores))), ColFac = ColFac), 
-               aes(cell_index, score, colour = ColFac)) + 
-    geom_point(size = 0.5, stroke = 0) + 
-    xlab("Cell Index") + ylab("Score") + 
-    #scale_color_brewer(palette = "Paired") + 
-    
-    
-    theme_bw() + 
-    theme(legend.position = "bottom") + 
-    guides(colour = guide_legend(override.aes = list(size=2, alpha=1))) +
-    scale_colour_manual(values = colorRampPalette(solarized_pal()(8))(length(levels(ColFac))),
-                        guide = guide_legend(nrow=2)) +
-    #guides(color = guide_legend(ncol = 2, override.aes = list(size = 2))) + 
-    ggtitle(paste0(Prefix, ComponentN)) 
-  #,
-  
-  # g2 <- genome_loadings(SDALoadings[ComponentN,], 
-  #                       label_both = T, 
-  #                       max.items = 10, 
-  #                       gene_locations =   GeneLoc,
-  #                       chromosome_lengths = chromosome.lengths)
-  # #, ncol = 1)
-  print(g1)
-  # print(g2)
-}
+# print_loadings_scores <- function(SDAScores = CellScores, SDALoadings = GeneLoadings, ComponentN=NA, ColFac = NA, Prefix="SDAV", GeneLoc=NA,
+#                                   chromosome.lengths = chromosome.lengths){
+#   library(ggthemes)
+#   library(scales)
+#   if(!is.factor(ColFac)) ColFac <- factor(ColFac)
+#   
+#   # SDAScores    <- SDAResult$scores
+#   # SDALoadings <- SDAResult$loadings[[1]]
+#   
+#   
+#   #cowplot::plot_grid(
+#   g1 <- ggplot(data.table(cell_index = 1:nrow(SDAScores), 
+#                           score = SDAScores[, paste0(Prefix, ComponentN)], experiment = gsub("_.*", 
+#                                                                                              "", gsub("[A-Z]+\\.", "", rownames(SDAScores))), ColFac = ColFac), 
+#                aes(cell_index, score, colour = ColFac)) + 
+#     geom_point(size = 0.5, stroke = 0) + 
+#     xlab("Cell Index") + ylab("Score") + 
+#     #scale_color_brewer(palette = "Paired") + 
+#     
+#     
+#     theme_bw() + 
+#     theme(legend.position = "bottom") + 
+#     guides(colour = guide_legend(override.aes = list(size=2, alpha=1))) +
+#     scale_colour_manual(values = colorRampPalette(solarized_pal()(8))(length(levels(ColFac))),
+#                         guide = guide_legend(nrow=2)) +
+#     #guides(color = guide_legend(ncol = 2, override.aes = list(size = 2))) + 
+#     ggtitle(paste0(Prefix, ComponentN)) 
+#   #,
+#   
+#   # g2 <- genome_loadings(SDALoadings[ComponentN,], 
+#   #                       label_both = T, 
+#   #                       max.items = 10, 
+#   #                       gene_locations =   GeneLoc,
+#   #                       chromosome_lengths = chromosome.lengths)
+#   # #, ncol = 1)
+#   print(g1)
+#   # print(g2)
+# }
 
 
 simplify <- theme(legend.position = "none",
@@ -122,12 +132,15 @@ simplify2 <- theme(legend.position = "right",
                   axis.text.y = element_blank(),
                   axis.ticks = element_blank())
 
-print_gene_list <- function(i, PrintRes = F, PosOnly = F, NegOnly = F, AbsLoad = T, TopN = 150) {
-  if(AbsLoad)  tmp <- data.table(as.matrix(results$loadings[[1]][i,]), keep.rownames = TRUE)[order(-abs(V1))][1:TopN]
+print_gene_list <- function(i, PrintRes = F, PosOnly = F, NegOnly = F, AbsLoad = T, TopN = 150, GeneLoadings = GeneLoadings) {
+  # colnames(GeneLoadings)
+  # GeneLoadings <- t(GeneLoadings)
   
-  if(PosOnly)  tmp <- data.table(as.matrix(results$loadings[[1]][i,]), keep.rownames = TRUE)[order(-(V1))][1:TopN]
+  if(AbsLoad)  tmp <- data.table(as.matrix(GeneLoadings[i,]), keep.rownames = TRUE)[order(-abs(V1))][1:TopN]
   
-  if(NegOnly)  tmp <- data.table(as.matrix(results$loadings[[1]][i,]), keep.rownames = TRUE)[order((V1))][1:TopN]
+  if(PosOnly)  tmp <- data.table(as.matrix(GeneLoadings[i,]), keep.rownames = TRUE)[order(-(V1))][1:TopN]
+  
+  if(NegOnly)  tmp <- data.table(as.matrix(GeneLoadings[i,]), keep.rownames = TRUE)[order((V1))][1:TopN]
   
   
   setnames(tmp, c("Gene.Name","Loading"))
@@ -159,155 +172,6 @@ go_volcano_plot <- function(x=GO_data, component="V5N", extraTitle=""){
     scale_x_log10(limits=c(1,NA), breaks=c(1,2,3,4,5,6,7,8))
   #)
 }
-
-
-print_tsne <- function (i, factorisation = SDAresults, cell_metadata = cell_data, 
-          jitter = 0, colourscale = "diverging", expression_matrix = data, 
-          princurves = principal_curves, dim1 = "Tsne1_QC1", dim2 = "Tsne2_QC1", 
-          flip = FALSE, predict = FALSE, curve = FALSE, stages = FALSE, 
-          point_size = 1, log = FALSE, principal_curve = "df_35", curve_width = 0.5) 
-{
-  if (i %in% colnames(cell_metadata)) {
-    tmp <- cell_metadata[, c(i, dim1, dim2), with = FALSE]
-    names(tmp)[1] <- "feature"
-    if (log) {
-      tmp$feature <- log(tmp$feature)
-    }
-    p <- ggplot(tmp[order(feature)], aes(get(dim1), get(dim2))) + 
-      geom_jitter(size = point_size, shape = 21, stroke = 0, 
-                  aes(fill = feature), width = jitter, height = jitter) + 
-      ggtitle(paste(i))
-    if (is.numeric(tmp$feature)) {
-      p <- p + scale_fill_viridis(guide = guide_colourbar(i), 
-                                  direction = -1)
-    }
-    else if (is.logical(tmp$feature)) {
-      p <- p + scale_fill_brewer(palette = "Set1")
-    }
-    else {
-      p <- p + scale_fill_brewer(palette = "Paired") + 
-        guides(fill = guide_legend(override.aes = list(size = 3, 
-                                                       alpha = 1), title = i))
-    }
-  }
-  else if (mode(i) == "numeric") {
-    tmp <- cell_metadata[, c(paste0("V", i), dim1, dim2), 
-                         with = FALSE]
-    names(tmp)[1] <- "score"
-    if (flip) {
-      tmp[, `:=`(score, score * (-1))]
-    }
-    p <- ggplot(tmp[order(abs(score))], aes(get(dim1), get(dim2))) + 
-      geom_point(size = point_size, stroke = 0, aes(colour = score), 
-                 position = position_jitter(width = jitter, height = jitter, 
-                                            seed = 42L)) + ggtitle(paste(i, ifelse(exists("component_order_dt"), 
-                                                                                   component_order_dt[component_number == i]$name, "")))
-    if (colourscale == "diverging") {
-      p <- p + scale_colour_gradientn(colours = log_colour_scale(range(tmp$score), 
-                                                                 scale = 1, midpoint = "grey60", interpolate = "linear", 
-                                                                 asymetric = F), limits = c(-max(abs(tmp$score)), 
-                                                                                            max(abs(tmp$score))), guide = guide_colourbar(paste0("Cell score\n(Component ", 
-                                                                                                                                                 i, ")"), title.position = if (stages) {
-                                                                                                                                                   "top"
-                                                                                                                                                 }
-                                                                                                                                          else {
-                                                                                                                                            "left"
-                                                                                                                                          }, nbin = 100))
-    }
-    else {
-      if (tmp[, score][tmp[, which.max(abs(score))]] < 
-          0) {
-        invert = 1
-      }
-      else {
-        invert = -1
-      }
-      p <- p + scale_colour_viridis(direction = invert, 
-                                    guide = guide_colourbar(paste0("Cell score\n(Component ", 
-                                                                   i, ")"), title.position = if (stages) {
-                                                                     "top"
-                                                                   }
-                                                            else {
-                                                              "left"
-                                                            }))
-    }
-  }
-  else {
-    gene = i
-    if (predict) {
-      if (!gene %in% names(factorisation$loadings[[1]][1, 
-                                                       ])) {
-        return("Gene not found")
-      }
-      tmp <- merge(cell_metadata, sda_predict(gene, factorisation))[order(get(gene))]
-    }
-    else {
-      if (!gene %in% colnames(expression_matrix)) {
-        return("Gene not found")
-      }
-      tmp <- merge(cell_metadata, expression_dt(gene, expression_matrix))[order(get(gene))]
-    }
-    p <- ggplot(tmp, aes(get(dim1), get(dim2))) + geom_point(size = point_size, 
-                                                             stroke = 0, aes(colour = get(gene)), position = position_jitter(width = jitter, 
-                                                                                                                             height = jitter, seed = 42L)) + scale_color_gradient2(mid = "lightgrey", 
-                                                                                                                                                                                   high = "midnightblue", low = "lightgrey", guide = guide_colourbar(paste0(gene, 
-                                                                                                                                                                                                                                                            " Expression"), title.position = if (stages) {
-                                                                                                                                                                                                                                                              "top"
-                                                                                                                                                                                                                                                            }
-                                                                                                                                                                                                                                                     else {
-                                                                                                                                                                                                                                                       "left"
-                                                                                                                                                                                                                                                     })) + ggtitle(gene)
-  }
-  curve_data <- load_curve_data(princurves, principal_curve)
-  colnames(curve_data)[1:2] <- c(dim1, dim2)
-  if (curve) {
-    p <- p + new_scale_color() + geom_path(data = curve_data, 
-                                           size = curve_width, colour = "black", alpha = 1, 
-                                           arrow = arrow(angle = 12.5, ends = "first", type = "closed")) + 
-      scale_colour_brewer(palette = "Set1")
-  }
-  if (stages) {
-    p <- p + new_scale_color() + geom_path(data = curve_data[-c(1:290)], 
-                                           size = 4, aes(get(dim1) * 1.7 + 3, get(dim2) * 1.35 - 
-                                                           5, colour = Stage), alpha = 0.5) + scale_colour_brewer(palette = "Set1") + 
-      guides(colour = guide_legend(ncol = 4, title.position = "top"))
-  }
-  p <- p + theme_minimal() + theme(legend.position = "bottom")
-  if (dim1 == "Tsne1_QC1") {
-    p <- p + labs(x = "t-SNE 1", y = "t-SNE 2")
-  }
-  else {
-    p <- p + labs(x = "Umap 1", y = "Umap 2")
-  }
-  return(p)
-}
-
-
-
-load_curve_data <- function (princurves = principal_curves, principal_curve = "df_35") 
-{
-  
-  curve_data <- data.table(princurves[[principal_curve]]$s)
-  
-  curve_data <- data.table(principal_curves[["df_35"]]$s[principal_curves[["df_35"]]$ord, 1], principal_curves[["df_35"]]$s[principal_curves[["df_35"]]$ord, 2])
- 
-  
-  curve_data[, `:=`(PseudoTime, 1:nrow(curve_data))]
-  m <- nrow(curve_data)
-  curve_data[m:(m * 0.975), `:=`(Stage, "Spermatogonia")]
-  curve_data[(m * 0.975):(m * 0.96), `:=`(Stage, "Leptotene")]
-  curve_data[(m * 0.96):(m * 0.93), `:=`(Stage, "Zygotene")]
-  curve_data[(m * 0.93):(m * 0.62), `:=`(Stage, "Pachytene")]
-  curve_data[(m * 0.62):(m * 0.5), `:=`(Stage, "Division II")]
-  curve_data[(m * 0.5):(m * 0.2), `:=`(Stage, "Round Spermatid")]
-  curve_data[(m * 0.2):0, `:=`(Stage, "Elongating \nSpermatid")]
-  curve_data[, `:=`(Stage, factor(Stage, levels = c("Spermatogonia", 
-                                                    "Leptotene", "Zygotene", "Pachytene", "Division II", 
-                                                    "Round Spermatid", "Elongating \nSpermatid")))]
-  return(curve_data)
-}
-
-find_pseudotime <- function(sample.point, pseudotime){ which.min(colSums((t(pseudotime) - c(sample.point))^2)) }
 
 
 

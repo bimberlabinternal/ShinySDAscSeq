@@ -18,12 +18,53 @@ library(dplyr)
 
 source("./Fxs.R")
 
+lookup.path <- "../../../Expts/TetCombo2/data"
+SerObj.paths <- list.files(lookup.path, full.names = T)[grepl('FinalSerObj', list.files(lookup.path))]
+SerObj.2load = 1
 
-list2env(readRDS( "./data/ShinyServerDataLS.rds"), envir = globalenv())
+SerObj.ShinySDAOut <- readRDS(SerObj.paths[SerObj.2load])
+
+CellScores   <- SerObj.ShinySDAOut@reductions$SDA@cell.embeddings
+GeneLoadings <- t(SerObj.ShinySDAOut@reductions$SDA@feature.loadings)
+
+MetaDF      <- SerObj.ShinySDAOut@misc$SDA_processing_results$MetaDF
+
+# names(SerObj.ShinySDAOut@misc$SDA_processing_results)
+# names(SerObj.ShinySDAOut@reductions$SDA@misc)
+
+
+
+GO_data             <- SerObj.ShinySDAOut@misc$SDA_processing_results$GO_data
+chromosome.lengths  <- SerObj.ShinySDAOut@misc$SDA_processing_results$chromosome.lengths
+gene_locations      <- SerObj.ShinySDAOut@misc$SDA_processing_results$gene_locations
+Remove_comps        <- as.numeric(SerObj.ShinySDAOut@misc$SDA_processing_results$Remove_comps)
+Keep_comps          <- setdiff(1:ncol(CellScores), Remove_comps)
+SDA_TopNpos             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNpos
+SDA_TopNneg             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNneg
+TopN                    <- SerObj.ShinySDAOut@misc$SDA_processing_results$TopN
+
+
+
+MetaDF$tsne1_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,1]
+MetaDF$tsne2_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,2]
+
+MetaDF$tsne1_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,1]
+MetaDF$tsne2_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,2]
+StatFac <- data.frame(ord=1:ncol(CellScores), Name=colnames(CellScores), row.names = colnames(CellScores))
+StatFac$Meta1 <- rep(0, nrow(StatFac))
+StatFac$Meta2 <- rep(0, nrow(StatFac))
+StatFac$Meta3 <- rep(0, nrow(StatFac))
+StatFac$Meta4 <- rep(0, nrow(StatFac))
+StatFac$Meta5 <- rep(0, nrow(StatFac))
+StatFac$Meta6 <- rep(0, nrow(StatFac))
+
+col_vector <- OOSAP::ColorTheme()$col_vector
+
+# list2env(readRDS( "./data/ShinyServerDataLS.rds"), envir = globalenv())
 
 #ShinyServerDataLS is a list of data:
 
-#"datat" a dataframe with cell barcode + meta data including 1 dimreduc (x,y) like tsne. The other paramters differ per study so custom.
+#"MetaDF" a dataframe with cell barcode + meta data including 1 dimreduc (x,y) like tsne. The other paramters differ per study so custom.
 #"results" : an SDA object post processing and label correction holds the cell scores and gene loading
 #"chromosome.lengths" : a dataframe with "chromosome", "length", "length_padded", "genomic_offset", "center" from mapping genes to biomart
 #"StatFac": A dataframe of "SDA" comp and annotations found in processing, labels to be shown when a comp is selected
@@ -34,62 +75,63 @@ list2env(readRDS( "./data/ShinyServerDataLS.rds"), envir = globalenv())
 
 
 ui <- dashboardPage(skin="red",
-  dashboardHeader(title = "EM_KO_BB_EXP1",
-                  dropdownMenu(type = "messages",
-                               messageItem(
-                                 from = "A",
-                                 message = "Task 1 due."
-                               ),
-                               messageItem(
-                                 from = "B",
-                                 message = "question?",
-                                 icon = icon("question"),
-                                 time = "13:45"
-                               ),
-                               messageItem(
-                                 from = "C",
-                                 message = "Woohoo!",
-                                 icon = icon("life-ring"),
-                                 time = "2014-12-01"
-                               )
-                  ),
-                  dropdownMenu(type = "notifications",
-                               notificationItem(
-                                 text = "ABC",
-                                 icon("users")
-                               ),
-                               notificationItem(
-                                 text = "XYZ",
-                                 icon("rep"),
-                                 status = "success"
-                               ),
-                               notificationItem(
-                                 text = "IJK",
-                                 icon = icon("exclamation-triangle"),
-                                 status = "warning"
-                               )
-                  ),
-                  #red, yellow, aqua, blue, light-blue, green, navy, teal, olive, lime, orange, fuchsia, purple, maroon, black.
-                  dropdownMenu(type = "tasks", badgeStatus = "success",
-                               taskItem(value = 99, color = "green",
-                                        "Preprocessing"
-                               ),
-                               taskItem(value = 99, color = "aqua",
-                                        "SDA processing"
-                               ),
-                               taskItem(value = 99, color = "yellow",
-                                        "DE analysis"
-                               ),
-                               taskItem(value = 70, color = "olive",
-                                        "Documentation"
-                               ),
-                               taskItem(value = 15, color = "black",
-                                        "Manuscript"
-                               ),
-                               taskItem(value = 70, color = "red",
-                                        "Overall project"
-                               )
-                  )
+  dashboardHeader(title = "ShinSaSe"
+                  # ,
+                  # dropdownMenu(type = "messages",
+                  #              messageItem(
+                  #                from = "A",
+                  #                message = "Task 1 due."
+                  #              ),
+                  #              messageItem(
+                  #                from = "B",
+                  #                message = "question?",
+                  #                icon = icon("question"),
+                  #                time = "13:45"
+                  #              ),
+                  #              messageItem(
+                  #                from = "C",
+                  #                message = "Woohoo!",
+                  #                icon = icon("life-ring"),
+                  #                time = "2014-12-01"
+                  #              )
+                  # ),
+                  # dropdownMenu(type = "notifications",
+                  #              notificationItem(
+                  #                text = "ABC",
+                  #                icon("users")
+                  #              ),
+                  #              notificationItem(
+                  #                text = "XYZ",
+                  #                icon("rep"),
+                  #                status = "success"
+                  #              ),
+                  #              notificationItem(
+                  #                text = "IJK",
+                  #                icon = icon("exclamation-triangle"),
+                  #                status = "warning"
+                  #              )
+                  # ),
+                  # #red, yellow, aqua, blue, light-blue, green, navy, teal, olive, lime, orange, fuchsia, purple, maroon, black.
+                  # dropdownMenu(type = "tasks", badgeStatus = "success",
+                  #              taskItem(value = 99, color = "green",
+                  #                       "Preprocessing"
+                  #              ),
+                  #              taskItem(value = 99, color = "aqua",
+                  #                       "SDA processing"
+                  #              ),
+                  #              taskItem(value = 99, color = "yellow",
+                  #                       "DE analysis"
+                  #              ),
+                  #              taskItem(value = 70, color = "olive",
+                  #                       "Documentation"
+                  #              ),
+                  #              taskItem(value = 15, color = "black",
+                  #                       "Manuscript"
+                  #              ),
+                  #              taskItem(value = 70, color = "red",
+                  #                       "Overall project"
+                  #              )
+                  # )
                   
   ),
   
@@ -135,15 +177,14 @@ ui <- dashboardPage(skin="red",
                   textInput("ComponentNtext", "Numerical input:", "1"),
                   textInput("Genetext", "Text input:", "CD69"),
                   radioButtons("data", "Data origin:",  # ADD or REMOVE depending on what is in the data
-                               c("tSNE - Batch-removed SDA-CellScores" = "tsneBrSDACS",
-                                 "tSNE - Original SDA-CellScores" = "tsneDSNDGE",
-                                 "tSNE - Batch-removed-Imputed-SER-DGE" = "tsneImpDGE"
+                               c("tSNE - raw SDA-CellScores" = "tsneCSraw",
+                                 "tSNE - batch-removed SDA-CellScores" = "tsneCSbr"
                                  )),
                   radioButtons("metaselect", "Metadata Selection:",
                                c("SubjID" = "SubjectId",
                                  "SampleDate" = "SampleDate",
-                                 "Cluster" = "CustClus",
-                                 "Cluster2" = "CustClus2",
+                                 #"Cluster" = "CustClus",
+                                 #"Cluster2" = "CustClus2",
                                  "BarcodePrefix" = "BarcodePrefix",
                                  "SingleR_Labels" = "SingleR_Labels"
                                  
@@ -206,7 +247,7 @@ ui <- dashboardPage(skin="red",
               box(
                 title = "Cell Scores Across", status = "primary", solidHeader = TRUE,
                 collapsible = TRUE,
-                plotOutput("SDAScoresAcross"),
+                plotOutput("CellScoresAcross"),
                 width = 10, background = "black"
               ),
               
@@ -283,9 +324,9 @@ ui <- dashboardPage(skin="red",
 server <- function(input, output, session) {
   
   
-  datat <- as.data.frame(cbind(datat, results$scores[rownames(datat),])); rownames(datat) <- datat$barcode 
-  
-  datat <- data.table(datat)
+  # MetaDF <- as.data.frame(cbind(MetaDF, CellScores[rownames(MetaDF),])); rownames(MetaDF) <- MetaDF$barcode 
+  # 
+  # MetaDF <- data.table(MetaDF)
   
   
   
@@ -293,52 +334,41 @@ server <- function(input, output, session) {
     #these depend on metadata 
     
     if(input$metaselect == "SubjectId") {
-      ColFac_DONR.ID <- sort(as.character(datat$SubjectId))
-      names(ColFac_DONR.ID) <- rownames(datat)[order(as.character(datat$SubjectId))]
+      ColFac_DONR.ID <- sort(as.character(MetaDF$SubjectId))
+      names(ColFac_DONR.ID) <- rownames(MetaDF)[order(as.character(MetaDF$SubjectId))]
       
-      ColFac_DONR.ID
+      # ColFac_DONR.ID
     } else {
       if(input$metaselect == "SampleDate"){
-        ColFac_DONR.ID <- sort(as.character(datat$SampleDate))
-        names(ColFac_DONR.ID) <- rownames(datat)[order(datat$SampleDate)]
+        ColFac_DONR.ID <- sort(as.character(MetaDF$SampleDate))
+        names(ColFac_DONR.ID) <- rownames(MetaDF)[order(MetaDF$SampleDate)]
         
       } else {
-        if(input$metaselect == "CustClus"){
-          ColFac_DONR.ID <- sort(as.character(datat$CustClus))
-          names(ColFac_DONR.ID) <- rownames(datat)[order(datat$CustClus)]
+        if(input$metaselect == "BarcodePrefix"){
+          ColFac_DONR.ID <- sort(as.character(MetaDF$BarcodePrefix))
+          names(ColFac_DONR.ID) <- rownames(MetaDF)[order(MetaDF$BarcodePrefix)]
           
         } else {
-          if(input$metaselect == "CustClus2"){
-            ColFac_DONR.ID <- sort(as.character(datat$CustClus2))
-            names(ColFac_DONR.ID) <- rownames(datat)[order(datat$CustClus2)]
+          if(input$metaselect == "SingleR_Labels"){
+            ColFac_DONR.ID <- sort(as.character(MetaDF$SingleR_Labels))
+            names(ColFac_DONR.ID) <- rownames(MetaDF)[order(MetaDF$SingleR_Labels)]
             
-          } else {
-            if(input$metaselect == "BarcodePrefix"){
-              ColFac_DONR.ID <- sort(as.character(datat$BarcodePrefix))
-              names(ColFac_DONR.ID) <- rownames(datat)[order(datat$BarcodePrefix)]
-              
-            } else {
-              if(input$metaselect == "SingleR_Labels"){
-                ColFac_DONR.ID <- sort(as.character(datat$SingleR_Labels))
-                names(ColFac_DONR.ID) <- rownames(datat)[order(datat$SingleR_Labels)]
-                
-              } else {
+          }  else {
                 
               }
-            }
-          }
+            
+          
         }
       }
     }
     
 
-    
-    SDAScores <- results$scores
+    # ComponentN = 1
     ComponentN <- as.numeric(input$ComponentNtext)
     
-    DTt <- data.frame(cell_index = 1:nrow(SDAScores), 
-                      score = SDAScores[, paste0("SDAV", ComponentN)], 
-                      experiment = gsub("_.*", "", gsub("[A-Z]+\\.", "", rownames(SDAScores))),
+    DTt <- data.frame(cell_index = 1:nrow(CellScores), 
+                      score = CellScores[, paste0("SDA_", ComponentN)], 
+                      experiment = gsub("_.*", "", gsub("[A-Z]+\\.", "", rownames(CellScores))),
                       ColFac = as.character(ColFac_DONR.ID),
                       row.names = names(ColFac_DONR.ID))
     # DTt$ColFac <- "unk"
@@ -349,29 +379,26 @@ server <- function(input, output, session) {
   
   
   
+  
+  ### tSNE DF selection
 
   tDF <- reactive({
 
     
-    if(input$data == "tsneBrSDACS") {
-      tempDF <- as.data.frame(datat)[, c("Tsne1_SDAQC2", "Tsne2_SDAQC2")]; colnames(tempDF) <- c("tSNE1", "tSNE2")
-      tempDF
+    if(input$data == "tsneCSraw") {
+      tempDF <- as.data.frame(MetaDF)[, c("tsne1_CS_raw", "tsne2_CS_raw")]; colnames(tempDF) <- c("tSNE1", "tSNE2")
+      # tempDF
     } else {
-        if(input$data == "tsneDSNDGE") {
-          tempDF <- as.data.frame(datat)[, c("Tsne1_SDAQC", "Tsne2_SDAQC")]; colnames(tempDF) <- c("tSNE1", "tSNE2")
+        if(input$data == "tsneCSbr") {
+          tempDF <- as.data.frame(MetaDF)[, c("tsne1_CS_br", "tsne2_CS_br")]; colnames(tempDF) <- c("tSNE1", "tSNE2")
          } else {
-            if(input$data == "tsneImpDGE"){
-              tempDF <- as.data.frame(datat)[, c("tSNE_SerImp_1", "tSNE_SerImp_2")]; colnames(tempDF) <- c("tSNE1", "tSNE2")
-              tempDF$tSNE1 <- as.numeric(tempDF$tSNE1)
-              tempDF$tSNE2 <- as.numeric(tempDF$tSNE2)
-              
-         }
+            
         
          }
-      tempDF
+      # tempDF
     }
     
-    rownames(tempDF) <- datat$barcode
+    rownames(tempDF) <- MetaDF$barcode
     
 
     tempDF$GeneExpr <- rep(0, nrow(tempDF))
@@ -381,7 +408,8 @@ server <- function(input, output, session) {
   
 
     observeEvent(input$NextSDA, {
-    Val <- as.character(min(c(40, as.numeric(input$ComponentNtext)+1)))
+      
+    Val <- as.character(min(c(ncol(CellScores), as.numeric(input$ComponentNtext)+1)))
     
     updateTextInput(session, "ComponentNtext", value = Val)
   })
@@ -395,7 +423,7 @@ server <- function(input, output, session) {
   observeEvent(input$C2Cpos, {
  
     
-    Out1 <- print_gene_list(as.numeric(input$ComponentNtext), PosOnly = T) %>%
+    Out1 <- print_gene_list(as.numeric(input$ComponentNtext), PosOnly = T, GeneLoadings = GeneLoadings) %>%
       as.data.frame() %>%
       head(as.numeric(input$NoOfGenes)) 
     Out1 <- Out1$Gene.Name
@@ -406,7 +434,7 @@ server <- function(input, output, session) {
   observeEvent(input$C2Cneg, {
   
     
-    Out2 <- print_gene_list(as.numeric(input$ComponentNtext), NegOnly = T) %>%
+    Out2 <- print_gene_list(as.numeric(input$ComponentNtext), NegOnly = T, GeneLoadings = GeneLoadings) %>%
 
       as.data.frame() %>%
       head(as.numeric(input$NoOfGenes)) 
@@ -420,13 +448,13 @@ server <- function(input, output, session) {
 
   
   output$packageTablePos <- renderTable({
-    print_gene_list(as.numeric(input$ComponentNtext), PosOnly = T) %>%
+    print_gene_list(as.numeric(input$ComponentNtext), PosOnly = T, GeneLoadings = GeneLoadings) %>%
       as.data.frame() %>%
       head(as.numeric(input$NoOfGenes))
   }, digits = 1)
   
   output$packageTableNeg <- renderTable({
-    print_gene_list(as.numeric(input$ComponentNtext), NegOnly = T) %>%
+    print_gene_list(as.numeric(input$ComponentNtext), NegOnly = T, GeneLoadings = GeneLoadings) %>%
       as.data.frame() %>%
       head(as.numeric(input$NoOfGenes))
   }, digits = 1)
@@ -435,16 +463,16 @@ server <- function(input, output, session) {
   
   output$cellinfo1 <- renderValueBox({
      valueBox(
-      value = StatFac[paste0("SDAV", input$ComponentNtext, sep=""),2], #format(Sys.time(), "%a %b %d %X %Y %Z"),
-      subtitle = StatFac[paste0("SDAV", input$ComponentNtext, sep=""),6],
+      value = StatFac[paste0("SDA_", input$ComponentNtext, sep=""),2], #format(Sys.time(), "%a %b %d %X %Y %Z"),
+      subtitle = StatFac[paste0("SDA_", input$ComponentNtext, sep=""),6],
       icon = icon("area-chart"),
       color = "yellow" #if (downloadRate >= input$rateThreshold) "yellow" else "aqua"
     )
   })
   
   output$GeneName <- renderValueBox({
-    if(input$Genetext %in% colnames(results$loadings[[1]])){
-      # results$loadings[[1]][,"PRM1"]
+    if(input$Genetext %in% colnames(GeneLoadings)){
+      # GeneLoadings[,"PRM1"]
       GeneName <- input$Genetext
     } else {
       GeneName <- paste0(input$Genetext, " Not Found")
@@ -464,7 +492,7 @@ server <- function(input, output, session) {
   output$plot1 <- renderPlot({
     #ggplotly
     tempDF <- tDF()
-    (ggplot(cbind(tempDF, SDAComp=datat[,get(paste0("SDAV", input$ComponentNtext, sep=""))]), 
+    (ggplot(cbind(tempDF, SDAComp=CellScores[,paste0("SDA_", input$ComponentNtext, sep="")]), 
             aes(tSNE1, tSNE2, color=cut(asinh(SDAComp), breaks = c(-Inf, -1, -.5, 0, .5, 1, Inf)))) +
        geom_point(size=0.1) + theme_bw() +
        scale_color_manual("CS", values = rev(c("red", "orange", "yellow", "lightblue", "dodgerblue", "blue")) ) + 
@@ -473,8 +501,8 @@ server <- function(input, output, session) {
              panel.background = element_rect(fill = "black",
                                              colour = "black",
                                              size = 0.5, linetype = "solid")) + 
-       ggtitle(paste0("SDAV", input$ComponentNtext, " \n", 
-                      StatFac[paste0("SDAV", input$ComponentNtext, sep=""),2], sep="")) + 
+       ggtitle(paste0("SDA_", input$ComponentNtext, " \n", 
+                      StatFac[paste0("SDA_", input$ComponentNtext, sep=""),2], sep="")) + 
        simplify2 + coord_cartesian(xlim = NULL, ylim = NULL, expand = FALSE))
     
   })
@@ -483,27 +511,21 @@ server <- function(input, output, session) {
     tempDF <- tDF()
     
     if(input$metaselect == "SubjectId") {
-      MetaFac <- (datat$SubjectId)
+      MetaFac <- (MetaDF$SubjectId)
     } else {
         if(input$metaselect == "SampleDate"){
-          MetaFac <- (datat$SampleDate)
+          MetaFac <- (MetaDF$SampleDate)
         } else {
-          if(input$metaselect == "CustClus"){
-            MetaFac <- (datat$CustClus)
+          if(input$metaselect == "BarcodePrefix"){
+            MetaFac <- (MetaDF$BarcodePrefix)
           } else {
-            if(input$metaselect == "CustClus2"){
-              MetaFac <- (datat$CustClus2)
-            } else {
-              if(input$metaselect == "BarcodePrefix"){
-                MetaFac <- (datat$BarcodePrefix)
-              } else {
-                if(input$metaselect == "SingleR_Labels"){
-                  MetaFac <- (datat$SingleR_Labels)
-                } else {
+            if(input$metaselect == "SingleR_Labels"){
+              MetaFac <- (MetaDF$SingleR_Labels)
+            }  else {
                   
                 }
-              }
-            }
+              
+            
           }
         }
     }
@@ -517,7 +539,7 @@ server <- function(input, output, session) {
       ggtitle("t-SNE - Final Pheno") +
       scale_color_manual(values=rev(col_vector)) + guides(colour = guide_legend(override.aes = list(size=2, alpha=1), ncol =2))  +
       coord_cartesian(xlim = NULL, ylim = NULL, expand = FALSE)
-    legend <- cowplot::get_legend(ggFph)
+    legend <- cowplot::get_legend(ggFph) 
     
     #grid.newpage()
     grid.draw(legend)
@@ -528,28 +550,22 @@ server <- function(input, output, session) {
     tempDF <- tDF()
     
     if(input$metaselect == "SubjectId") {
-      MetaFac <- (datat$SubjectId)
+      MetaFac <- (MetaDF$SubjectId)
     } else {
       if(input$metaselect == "SampleDate"){
-        MetaFac <- (datat$SampleDate)
+        MetaFac <- (MetaDF$SampleDate)
       } else {
-        if(input$metaselect == "CustClus"){
-          MetaFac <- (datat$CustClus)
+        if(input$metaselect == "BarcodePrefix"){
+          MetaFac <- (MetaDF$BarcodePrefix)
         } else {
-          if(input$metaselect == "CustClus2"){
-            MetaFac <- (datat$CustClus2)
-          } else {
-            if(input$metaselect == "BarcodePrefix"){
-              MetaFac <- (datat$BarcodePrefix)
-            } else {
-              if(input$metaselect == "SingleR_Labels"){
-                MetaFac <- (datat$SingleR_Labels)
-              } else {
+          if(input$metaselect == "SingleR_Labels"){
+            MetaFac <- (MetaDF$SingleR_Labels)
+          }  else {
                 
               }
             }
-          }
-        }
+          
+        
       }
     }
     
@@ -571,16 +587,16 @@ server <- function(input, output, session) {
     
     tempDF <- as.data.frame(tDF())
     
-    if(input$Genetext %in% colnames(results$loadings[[1]])){
-      # results$loadings[[1]][,"PRM1"]
-      GeneExpr <- results$scores %*% results$loadings[[1]][,as.character(input$Genetext)]
+    if(input$Genetext %in% colnames(GeneLoadings)){
+      # GeneLoadings[,"PRM1"]
+      GeneExpr <- CellScores %*% GeneLoadings[,as.character(input$Genetext)]
     } else {
-      GeneExpr <- results$scores %*% rep(0, nrow(results$loadings[[1]]))
+      GeneExpr <- CellScores %*% rep(0, nrow(GeneLoadings))
 
     }
     #ggplotly
 
-    LoadOrdVal <- round(results$loadings[[1]][,as.character(input$Genetext)][order(abs(results$loadings[[1]][,as.character(input$Genetext)]), decreasing = T)], 3)
+    LoadOrdVal <- round(GeneLoadings[,as.character(input$Genetext)][order(abs(GeneLoadings[,as.character(input$Genetext)]), decreasing = T)], 3)
     
 
     tempDF[rownames(GeneExpr), ]$GeneExpr <- GeneExpr[,1]
@@ -644,11 +660,11 @@ server <- function(input, output, session) {
     if(! (as.numeric(input$ComponentNtext) %in% 1:40)){
       print("No Comp")
     } else {
-      pgl <- genome_loadings(results$loadings[[1]][as.numeric(input$ComponentNtext),], 
+      pgl <- genome_loadings(GeneLoadings[as.numeric(input$ComponentNtext),], 
                              label_both = T, 
                              max.items = 10, 
                              gene_locations =   gene_locations,
-                             chromosome_lengths = chromosome.lengths)+ theme(aspect.ratio = .5)
+                             chromosome_lengths = chromosome.lengths, GeneLoadings = GeneLoadings)+ theme(aspect.ratio = .5)
       print(pgl)
       
     }
@@ -657,21 +673,23 @@ server <- function(input, output, session) {
   
   
   
-  output$SDAScoresAcross <- renderPlot({
+  output$CellScoresAcross <- renderPlot({
     
     DTt <- ScoreAcrossDT()
     ComponentN <- as.numeric(input$ComponentNtext)
-    SDAScores <- results$scores
+    # CellScores <- CellScores
+    
+    
     
     if(! (as.numeric(input$ComponentNtext) %in% 1:40)){
       print("No Comp")
     } else {
+      lims <- quantile(asinh(CellScores[, paste0("SDA_", ComponentN)]^3), c(0.01, 0.99))
       
-      
-      pgl <- ggplot(data.table(DTt), 
-                    aes(cell_index, score, colour = factor(ColFac))) + 
+      pgl <- ggplot((DTt), 
+                    aes(cell_index, asinh(score^3), colour = factor(ColFac))) + 
         geom_point(size = 0.7, stroke = 0) + 
-        xlab("Cell Index") + ylab("Score") + 
+        xlab("Cell Index") + ylab("asinh(Score^3)") + 
         #scale_color_brewer(palette = "Paired") + 
         theme_bw() + 
         theme(legend.position = "bottom",
@@ -682,8 +700,8 @@ server <- function(input, output, session) {
         scale_colour_manual(values =rev(col_vector),
                             guide = guide_legend(nrow=2)) +
         #guides(color = guide_legend(ncol = 2, override.aes = list(size = 2))) + 
-        ggtitle(paste0("SDAV", ComponentN))+
-        ylim(quantile(SDAScores[, paste0("SDAV", ComponentN)],.01), quantile(SDAScores[, paste0("SDAV", ComponentN)],.99))
+        ggtitle(paste0("SDA_", ComponentN)) +
+        ylim(lims[1], lims[2])
       
       print(pgl)
       
@@ -726,11 +744,11 @@ server <- function(input, output, session) {
     
     print("length of your genes:")
     print(length(GeneSet))
-    GeneSet <- GeneSet[GeneSet %in% colnames(results$loadings[[1]][,])]
+    GeneSet <- GeneSet[GeneSet %in% colnames(GeneLoadings[,])]
     print("length of your genes in this dataset:")
     print(length(GeneSet))
     
-    plotEnrich(GeneSetsDF=SDA_Top100pos, 
+    plotEnrich(GeneSetsDF=SDA_TopNpos, 
                GeneVec = GeneSet, 
                plotTitle="Gene-set enrichment\n SDA top 40 pos loadings\n Cust. Input. genes \n Hypergeometric test: * adj.p < 0.01",
                xLab = "SDA Comps",
@@ -762,10 +780,10 @@ server <- function(input, output, session) {
       #print(GeneSet)
     }
 
-    GeneSet <- GeneSet[GeneSet %in% colnames(results$loadings[[1]][,])]
+    GeneSet <- GeneSet[GeneSet %in% colnames(GeneLoadings[,])]
 
     
-    plotEnrich(GeneSetsDF=SDA_Top100neg, 
+    plotEnrich(GeneSetsDF=SDA_TopNneg, 
                GeneVec = GeneSet, 
                plotTitle="Gene-set enrichment\n SDA top 40 neg loadings\n Cust. Input. genes \n Hypergeometric test: * adj.p < 0.01",
                xLab = "SDA Comps",

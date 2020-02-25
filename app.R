@@ -16,6 +16,9 @@ library(grid)
 library(gridExtra) 
 library(dplyr)
 
+library(ggpubr)
+library(Seurat)
+
 source("./Fxs.R")
 
 
@@ -101,7 +104,7 @@ ui <- dashboardPage(skin="red",
     sidebarMenu(
       menuItem("Main Tab", tabName = "combodash", icon = icon("dashboard"),
                badgeLabel = "underconst.", badgeColor = "yellow"),
-      menuItem("Tab 2. (dev)", tabName = "germdash", icon = icon("affiliatetheme"),
+      menuItem("Gene expr stat. sig", tabName = "geneexprstatsig", icon = icon("affiliatetheme"),
                badgeLabel = "soon", badgeColor = "red"),
       menuItem("Tab 3. (dev)", tabName = "somadash", icon = icon("allergies"),
                badgeLabel = "soon", badgeColor = "red"),
@@ -124,14 +127,19 @@ ui <- dashboardPage(skin="red",
                       background-color: black !important;
                       }
                       "))),
+    
+    
+    ##### tab items------------------ 
     tabItems(
+      ##### tab1------------------ 
+      
       # First tab content
       tabItem(tabName = "combodash",
               fluidRow(
                 
                 box(title = "load_SeuratSDA_Obj", status = "warning", solidHeader = T,
                     textInput("SDAroot", "Path to SDA folders. Expects dimnames in one dir up.", 
-                                  value ="../../../Expts/TetCombo2/data"), #/Tet_SDADGE_DropSim_mi10000_nc40_N21509_rep1
+                                  value ="../../../Expts/TetCombo3/data"), #/Tet_SDADGE_DropSim_mi10000_nc40_N21509_rep1
                         uiOutput("select.folder"),
                         actionButton("loadSDA", "Load SDA"),
                     width = 12),
@@ -160,12 +168,14 @@ ui <- dashboardPage(skin="red",
                                  "tSNE - batch-removed SDA-CellScores" = "tsneCSbr"
                                  )),
                   radioButtons("metaselect", "Metadata Selection:",
-                               c("SubjID" = "SubjectId",
+                               c("EXP.ID" = "EXP.ID",
+                                 "SubjID" = "SubjectId",
                                  "SampleDate" = "SampleDate",
                                  #"Cluster" = "CustClus",
                                  #"Cluster2" = "CustClus2",
                                  "BarcodePrefix" = "BarcodePrefix",
-                                 "SingleR_Labels" = "SingleR_Labels"
+                                 "SingleR_Labels" = "SingleR_Labels",
+                                 "Unsup_Clust_BRtSNE" = "Unsup_Clust_BRtSNE"
                                  
                                )),
                   width = 5),
@@ -247,21 +257,67 @@ ui <- dashboardPage(skin="red",
               
               
       ),
+      ##### tab2------------------ 
       
       # Germ tab content
-      tabItem(tabName = "germdash",
-              h2("Germ only tab content")
-      ),
+      tabItem(tabName = "geneexprstatsig",
+              h2("Gene Expression Stat. Sig.")
+              ,
+              fluidRow(
+
+                box(
+                  title = "Inputs", status = "warning", solidHeader = TRUE,
+                  #"Box content here", br(), "More box content",
+                  #sliderInput("ComponentN", "Slider input:", 1, 150, 1),
+                  width = 5,
+                  textInput("Genetext_tab2", "Text input:", "CD69"),
+                  radioButtons("metaselect_tab2", "Metadata Selection:",
+                               c("EXP.ID" = "EXP.ID",
+                                 "SubjID" = "SubjectId",
+                                 "SampleDate" = "SampleDate",
+                                 #"Cluster" = "CustClus",
+                                 #"Cluster2" = "CustClus2",
+                                 "BarcodePrefix" = "BarcodePrefix",
+                                 "SingleR_Labels" = "SingleR_Labels",
+                                 "Unsup_Clust_BRtSNE" = "Unsup_Clust_BRtSNE"
+                               )),
+                  selectInput("clusres", "Clus res:",
+                              c("0.001" = "0.001",
+                                "0.005" = "0.005",
+                                "0.01" = "0.01",
+                                "0.05" = "0.05",
+                                "0.1"  = "0.1",
+                                "0.5"  = "0.5",
+                                "0.8"  = "0.8",
+                                "1"  = "1"), selected = "0.005"),
+                  actionButton("ClustertSNEbr", "Cluster tSNEBr")
+                  
+                  
+                ),
+                
+                box(
+                  title = "Gene Expression Stat. Sig. Meta", status = "primary", solidHeader = TRUE,
+                  collapsible = TRUE,
+                  plotOutput("GeneExprSigMeta", height = 1000),
+                  width = 10
+                )
+      )),
+      
+      ##### tab3------------------ 
       
       # Soma tab content
       tabItem(tabName = "somadash",
               h2("Soma only tab content")
       ),
       
+      ##### tab4------------------ 
+      
       # pseudotime tab content
       tabItem(tabName = "pseudotime",
               h2("Pseudotime tab content")
       ),
+      
+      ##### tab5------------------ 
       
       # Enrichment tab content
       tabItem(tabName = "Enrichment",
@@ -293,32 +349,37 @@ ui <- dashboardPage(skin="red",
               )
       )
       
+    
+ 
+  
+  ##### end of tabs------------------ 
+  
     )
-  )
-  
-  
+)
 )
 
+## Server --------------------- 
 
 server <- function(input, output, session) {
-  # col_vector <- OOSAP::ColorTheme()$col_vector
   
-  qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
-  col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+# col_vector <- OOSAP::ColorTheme()$col_vector
+  
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
   
   
-  envv=reactiveValues(y=NULL)
+envv=reactiveValues(y=NULL)
 
-  ### Input data -------------
-  # lookup.path <- "../../../Expts/TetCombo2/data"
+### Input data -------------
+# lookup.path <- "../../../Expts/TetCombo2/data"
   
-  observeEvent(input$SDAroot, {
+observeEvent(input$SDAroot, {
     envv$lookup.path = input$SDAroot
-    envv$SerObj.paths <- list.files(envv$lookup.path, full.names = F)[grepl('FinalSerObj', list.files(envv$lookup.path))]
+    envv$SerObj.paths <- list.files(envv$lookup.path, full.names = F, recursive = T)[grepl('FinalSerObj', list.files(envv$lookup.path, recursive = T))]
     
   })
   
-  observeEvent(input$compsIn, {
+observeEvent(input$compsIn, {
     
     if(!is.null(envv$Keep_comps)){
       if(input$compsIn == "TrueSigComps") {
@@ -344,11 +405,36 @@ server <- function(input, output, session) {
         
   })
   
+
+observeEvent(input$clusres, {
+  envv$cluster_res = as.numeric(input$clusres)
+  # cluster_res=0.01 # dropdown?
   
-  
+})
+observeEvent(input$ClustertSNEbr, {
 
   
-  output$select.folder <-
+  print("Finding Neibors on tSNE Batch-removed")
+  envv$SerObj.ShinySDAOut <- FindNeighbors(object = envv$SerObj.ShinySDAOut, 
+                                      dims = c(1,2),
+                                      reduction = "tSNECSBR")
+  print("Finding clusters")
+  cluster_res=envv$cluster_res 
+  
+  envv$SerObj.ShinySDAOut <- FindClusters(object = envv$SerObj.ShinySDAOut, resolution = cluster_res)
+  
+  # DimPlot(SerObj.ShinySDAOut, reduction = "tSNECSBR")
+  
+  # table(Idents(envv$SerObj.ShinySDAOut))
+  
+  envv$MetaDF$Clust_tSNECSBR <- paste0("Clust", as.character(Idents(envv$SerObj.ShinySDAOut)))
+  
+  
+  
+})
+
+
+output$select.folder <-
     renderUI(expr = selectInput(inputId = 'folder.name',
                                 label = 'File Name',
                                 choices = envv$SerObj.paths
@@ -358,134 +444,183 @@ server <- function(input, output, session) {
 ## Load data --------------
 
 observeEvent(input$loadSDA, {
+#  envv <- list()
+# input <- list()
+# input$SDAroot <-  "../../../Expts/TetCombo3/data"
+# input$folder.name <-  "sda_results/Tet_SDADGE_DropSim_mi10000_nc40_N21509_rep1/Tet_SDADGE_DropSim_mi10000_nc40_N21509_rep1_FinalSerObj.rds"
+  
+  
 
-    envv$path2SDA_dyn <- paste0(input$SDAroot, "/", input$folder.name)
+  
+  
+  envv$path2SDA_dyn <- paste0(input$SDAroot, "/", input$folder.name)
 
-    print("Loading SeuratSDAObj")
-    print(envv$path2SDA_dyn)
+  print("Loading SeuratSDAObj")
+  print(envv$path2SDA_dyn)
 
-    if(file.exists(envv$path2SDA_dyn)) {
-    SerObj.ShinySDAOut <- readRDS(envv$path2SDA_dyn)
-    
-    print("SeuratSDAObj Loaded")
-    envv$SerObj.ShinySDAOut <- SerObj.ShinySDAOut
-
-    envv$CellScores   <- SerObj.ShinySDAOut@reductions$SDA@cell.embeddings
-    envv$GeneLoadings <- t(SerObj.ShinySDAOut@reductions$SDA@feature.loadings)
-
-    envv$MetaDF      <- SerObj.ShinySDAOut@misc$SDA_processing_results$MetaDF
-
-    # names(SerObj.ShinySDAOut@misc$SDA_processing_results)
-    # names(SerObj.ShinySDAOut@reductions$SDA@misc)
-
-
-
-    envv$GO_data             <- SerObj.ShinySDAOut@misc$SDA_processing_results$GO_data
-    envv$chromosome.lengths  <- SerObj.ShinySDAOut@misc$SDA_processing_results$chromosome.lengths
-    envv$gene_locations      <- SerObj.ShinySDAOut@misc$SDA_processing_results$gene_locations
-    envv$Remove_comps        <- as.numeric(SerObj.ShinySDAOut@misc$SDA_processing_results$Remove_comps)
-    envv$Keep_comps          <- setdiff(1:ncol(envv$CellScores), envv$Remove_comps)
-    envv$SDA_TopNpos             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNpos
-    envv$SDA_TopNneg             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNneg
-    envv$TopN                    <- SerObj.ShinySDAOut@misc$SDA_processing_results$TopN
-
-
-
-    envv$MetaDF$tsne1_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,1]
-    envv$MetaDF$tsne2_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,2]
-
-    envv$MetaDF$tsne1_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,1]
-    envv$MetaDF$tsne2_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,2]
-
-
-    envv$StatFac <- data.frame(ord=1:ncol(envv$CellScores), Name=colnames(envv$CellScores), row.names = colnames(envv$CellScores))
-    envv$StatFac$Meta1 <- rep(0, nrow(envv$StatFac))
-    envv$StatFac$Meta2 <- rep(0, nrow(envv$StatFac))
-    envv$StatFac$Meta3 <- rep(0, nrow(envv$StatFac))
-    envv$StatFac$Meta4 <- rep(0, nrow(envv$StatFac))
-    envv$StatFac$Meta5 <- rep(0, nrow(envv$StatFac))
-    envv$StatFac$Meta6 <- rep(0, nrow(envv$StatFac))
+  if(file.exists(envv$path2SDA_dyn)) {
     
     
-    if(input$compsIn == "TrueSigComps") {
-      envv$comps = as.numeric(envv$Keep_comps)
-      
-    }
-    if(input$compsIn == "NoiseComps") {
-      envv$comps = as.numeric(envv$Remove_comps)
-    }
-    envv$comps <- sort(envv$comps)
-    Val = as.character(min(envv$comps))
-    envv$comps_order = 1 
-    updateTextInput(session, "ComponentNtext", value = Val)
+  SerObj.ShinySDAOut <- readRDS(envv$path2SDA_dyn)
+  
+  print("SeuratSDAObj Loaded")
+  envv$SerObj.ShinySDAOut <- SerObj.ShinySDAOut
+
+  envv$CellScores   <- SerObj.ShinySDAOut@reductions$SDA@cell.embeddings
+  envv$GeneLoadings <- t(SerObj.ShinySDAOut@reductions$SDA@feature.loadings)
+
+  envv$MetaDF      <- SerObj.ShinySDAOut@misc$SDA_processing_results$MetaDF
+
+  # names(SerObj.ShinySDAOut@misc$SDA_processing_results)
+  # names(SerObj.ShinySDAOut@reductions$SDA@misc)
+  
+  # SerObj.ShinySDAOut2 <- FindNeighbors(object = SerObj.ShinySDAOut, 
+  #                                      dims = as.numeric(SerObj.ShinySDAOut@misc$SDA_processing_results$Remove_comps),
+  #                                      reduction = "SDA")
+  # SerObj.ShinySDAOut2 <- FindClusters(object = SerObj.ShinySDAOut2, resolution = 1.2)
+  # DimPlot(SerObj.ShinySDAOut2, reduction = "tSNECSBR")
+  # 
+  # DimPlot(SerObj.ShinySDAOut2, reduction = "SDA")
+  
+  print("Finding Neibors on tSNE Batch-removed")
+  SerObj.ShinySDAOut <- FindNeighbors(object = SerObj.ShinySDAOut, 
+                                       dims = c(1,2),
+                                       reduction = "tSNECSBR")
+  print("Finding clusters")
+  cluster_res=envv$cluster_res 
+  
+  SerObj.ShinySDAOut <- FindClusters(object = SerObj.ShinySDAOut, resolution = cluster_res)
+  
+  # DimPlot(SerObj.ShinySDAOut, reduction = "tSNECSBR")
+  
+  table(Idents(SerObj.ShinySDAOut))
+  
+  envv$MetaDF$Clust_tSNECSBR <- paste0("Clust", as.character(Idents(SerObj.ShinySDAOut)))
+
+  
 
 
-    }
-
-  })
-
-
-
-
-
-
-
+  envv$GO_data             <- SerObj.ShinySDAOut@misc$SDA_processing_results$GO_data
+  envv$chromosome.lengths  <- SerObj.ShinySDAOut@misc$SDA_processing_results$chromosome.lengths
+  envv$gene_locations      <- SerObj.ShinySDAOut@misc$SDA_processing_results$gene_locations
+  envv$Remove_comps        <- as.numeric(SerObj.ShinySDAOut@misc$SDA_processing_results$Remove_comps)
+  envv$Keep_comps          <- setdiff(1:ncol(envv$CellScores), envv$Remove_comps)
+  envv$SDA_TopNpos             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNpos
+  envv$SDA_TopNneg             <- SerObj.ShinySDAOut@misc$SDA_processing_results$SDA_TopNneg
+  envv$TopN                    <- SerObj.ShinySDAOut@misc$SDA_processing_results$TopN
 
 
 
-  ### Scores Across DT --------
+  envv$MetaDF$tsne1_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,1]
+  envv$MetaDF$tsne2_CS_raw <- SerObj.ShinySDAOut@misc$SDA_processing_results$tsne_CS_raw$Y[,2]
 
-  ScoreAcrossDT <- reactive({
+  envv$MetaDF$tsne1_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,1]
+  envv$MetaDF$tsne2_CS_br <- SerObj.ShinySDAOut@reductions$tSNECSBR@cell.embeddings[,2]
+
+
+  envv$StatFac <- data.frame(ord=1:ncol(envv$CellScores), Name=colnames(envv$CellScores), row.names = colnames(envv$CellScores))
+  envv$StatFac$Meta1 <- rep(0, nrow(envv$StatFac))
+  envv$StatFac$Meta2 <- rep(0, nrow(envv$StatFac))
+  envv$StatFac$Meta3 <- rep(0, nrow(envv$StatFac))
+  envv$StatFac$Meta4 <- rep(0, nrow(envv$StatFac))
+  envv$StatFac$Meta5 <- rep(0, nrow(envv$StatFac))
+  envv$StatFac$Meta6 <- rep(0, nrow(envv$StatFac))
+  
+  
+  if(input$compsIn == "TrueSigComps") {
+    envv$comps = as.numeric(envv$Keep_comps)
+    
+  }
+  if(input$compsIn == "NoiseComps") {
+    envv$comps = as.numeric(envv$Remove_comps)
+  }
+  envv$comps <- sort(envv$comps)
+  Val = as.character(min(envv$comps))
+  envv$comps_order = 1 
+  updateTextInput(session, "ComponentNtext", value = Val)
+
+
+  }
+
+})
+
+
+
+### Scores Across DT --------
+
+ScoreAcrossDT <- reactive({
     #these depend on metadata
-
-    if(input$metaselect == "SubjectId") {
-      ColFac_DONR.ID <- sort(as.character(envv$MetaDF$SubjectId))
-      names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(as.character(envv$MetaDF$SubjectId))]
-
-      # ColFac_DONR.ID
-    } else {
-      if(input$metaselect == "SampleDate"){
-        ColFac_DONR.ID <- sort(as.character(envv$MetaDF$SampleDate))
-        names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(envv$MetaDF$SampleDate)]
-
+    
+    if(!is.null(envv$MetaDF)){
+      # print(head(envv$MetaDF))
+      
+      if(input$metaselect == "SubjectId") {
+        ColFac_DONR.ID <- sort(as.character(envv$MetaDF$SubjectId))
+        names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(as.character(envv$MetaDF$SubjectId))]
+        
+        # ColFac_DONR.ID
       } else {
-        if(input$metaselect == "BarcodePrefix"){
-          ColFac_DONR.ID <- sort(as.character(envv$MetaDF$BarcodePrefix))
-          names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(envv$MetaDF$BarcodePrefix)]
-
+        if(input$metaselect == "SampleDate"){
+          ColFac_DONR.ID <- sort(as.character(envv$MetaDF$SampleDate))
+          names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(envv$MetaDF$SampleDate)]
+          
         } else {
-          if(input$metaselect == "SingleR_Labels"){
-            ColFac_DONR.ID <- sort(as.character(envv$MetaDF$SingleR_Labels))
-            names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(envv$MetaDF$SingleR_Labels)]
+          if(input$metaselect == "BarcodePrefix"){
+            ColFac_DONR.ID <- sort(as.character(envv$MetaDF$BarcodePrefix))
+            names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(envv$MetaDF$BarcodePrefix)]
+            
+          } else {
+            if(input$metaselect == "SingleR_Labels"){
+              ColFac_DONR.ID <- sort(as.character(envv$MetaDF$SingleR_Labels))
+              names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(envv$MetaDF$SingleR_Labels)]
+              
+            }  else {
+              
+              if(input$metaselect == "Unsup_Clust_BRtSNE"){
+                ColFac_DONR.ID <- sort(as.character(envv$MetaDF$Clust_tSNECSBR))
+                names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(envv$MetaDF$Clust_tSNECSBR)]
+               
+                
+              } else if(input$metaselect == "EXP.ID"){
+                ColFac_DONR.ID <- sort(as.character(envv$MetaDF$EXP.ID))
+                names(ColFac_DONR.ID) <- rownames(envv$MetaDF)[order(envv$MetaDF$EXP.ID)]
+                
 
-          }  else {
-
+              } else {
+                
               }
-
-
+              
+            }
+            
+            
+          }
         }
       }
+      # print(ColFac_DONR.ID)
+      
+      
+      # input$ComponentNtext = 1
+      ComponentN <- as.numeric(input$ComponentNtext)
+      
+      DTt <- data.frame(cell_index = 1:nrow(envv$CellScores),
+                        score = envv$CellScores[, paste0("SDA_", ComponentN)],
+                        experiment = gsub("_.*", "", gsub("[A-Z]+\\.", "", rownames(envv$CellScores))),
+                        ColFac = as.character(ColFac_DONR.ID),
+                        row.names = names(ColFac_DONR.ID))
+      # DTt$ColFac <- "unk"
+      
+      # DTt[names(ColFac_DONR.ID),]$ColFac <- as.character(ColFac_DONR.ID)
+      DTt
+      
     }
 
-
-    # input$ComponentNtext = 1
-    ComponentN <- as.numeric(input$ComponentNtext)
-
-    DTt <- data.frame(cell_index = 1:nrow(envv$CellScores),
-                      score = envv$CellScores[, paste0("SDA_", ComponentN)],
-                      experiment = gsub("_.*", "", gsub("[A-Z]+\\.", "", rownames(envv$CellScores))),
-                      ColFac = as.character(ColFac_DONR.ID),
-                      row.names = names(ColFac_DONR.ID))
-    # DTt$ColFac <- "unk"
-
-    # DTt[names(ColFac_DONR.ID),]$ColFac <- as.character(ColFac_DONR.ID)
-    DTt
+    
   })
 
 
-  ### tSNE DF selection
+### tSNE DF selection
 
-  tDF <- reactive({
+tDF <- reactive({
 
 
     if(!is.null(envv$MetaDF)){
@@ -515,7 +650,7 @@ observeEvent(input$loadSDA, {
   })
 
 
-    observeEvent(input$NextSDA, {
+observeEvent(input$NextSDA, {
       
       
       if (envv$comps_order + 1 %in% 1:length(envv$comps)){
@@ -529,7 +664,7 @@ observeEvent(input$loadSDA, {
     
   })
 
-  observeEvent(input$PrevSDA, {
+observeEvent(input$PrevSDA, {
     if (envv$comps_order - 1 %in% 1:length(envv$comps)){
       envv$comps_order <- envv$comps_order - 1
     }
@@ -540,7 +675,7 @@ observeEvent(input$loadSDA, {
     updateTextInput(session, "ComponentNtext", value = Val)
   })
 
-  observeEvent(input$C2Cpos, {
+observeEvent(input$C2Cpos, {
 
 
     Out1 <- print_gene_list(as.numeric(input$ComponentNtext), PosOnly = T, GeneLoadings = envv$GeneLoadings) %>%
@@ -552,7 +687,7 @@ observeEvent(input$loadSDA, {
 
   })
   
-  observeEvent(input$C2Cneg, {
+observeEvent(input$C2Cneg, {
 
 
     Out2 <- print_gene_list(as.numeric(input$ComponentNtext), NegOnly = T, GeneLoadings = envv$GeneLoadings) %>%
@@ -568,7 +703,7 @@ observeEvent(input$loadSDA, {
 
 
 
-  output$packageTablePos <- renderTable({
+output$packageTablePos <- renderTable({
     if(!is.null(envv$GeneLoadings)){
       print_gene_list(as.numeric(input$ComponentNtext), PosOnly = T, GeneLoadings = envv$GeneLoadings) %>%
         as.data.frame() %>%
@@ -577,7 +712,7 @@ observeEvent(input$loadSDA, {
     
   }, digits = 1)
 
-  output$packageTableNeg <- renderTable({
+output$packageTableNeg <- renderTable({
     if(!is.null(envv$GeneLoadings)){
       
     print_gene_list(as.numeric(input$ComponentNtext), NegOnly = T, GeneLoadings = envv$GeneLoadings) %>%
@@ -590,7 +725,7 @@ observeEvent(input$loadSDA, {
 
 
 
-  output$cellinfo1 <- renderValueBox({
+output$cellinfo1 <- renderValueBox({
       valueBox(
         value = envv$StatFac[paste0("SDA_", input$ComponentNtext, sep=""),2], #format(Sys.time(), "%a %b %d %X %Y %Z"),
         subtitle = envv$StatFac[paste0("SDA_", input$ComponentNtext, sep=""),6],
@@ -601,7 +736,7 @@ observeEvent(input$loadSDA, {
      
   })
 
-  output$GeneName <- renderValueBox({
+output$GeneName <- renderValueBox({
     if(input$Genetext %in% colnames(envv$GeneLoadings)){
       # envv$GeneLoadings[,"PRM1"]
       GeneName <- input$Genetext
@@ -620,7 +755,7 @@ observeEvent(input$loadSDA, {
 
 
   #renderPlotly
-  output$plot1 <- renderPlot({
+output$plot1 <- renderPlot({
     
     if(!is.null(envv$CellScores)){
       
@@ -643,7 +778,7 @@ observeEvent(input$loadSDA, {
     }
   })
 
-  output$plot2 <- renderPlot({
+output$plot2 <- renderPlot({
     
     if(!is.null(envv$MetaDF)){
       tempDF <- tDF()
@@ -660,6 +795,15 @@ observeEvent(input$loadSDA, {
             if(input$metaselect == "SingleR_Labels"){
               MetaFac <- (envv$MetaDF$SingleR_Labels)
             }  else {
+              if(input$metaselect == "Unsup_Clust_BRtSNE"){
+                MetaFac <- (envv$MetaDF$Clust_tSNECSBR)
+                
+              } else if(input$metaselect == "EXP.ID"){
+                MetaFac <- (envv$MetaDF$EXP.ID)
+                
+              } else {
+                
+              }
               
             }
             
@@ -687,7 +831,7 @@ observeEvent(input$loadSDA, {
 
   })
   #renderPlotly
-  output$plot3 <- renderPlot({
+output$plot3 <- renderPlot({
     
     if(!is.null(envv$GeneLoadings)){
       
@@ -706,6 +850,15 @@ observeEvent(input$loadSDA, {
             if(input$metaselect == "SingleR_Labels"){
               MetaFac <- (envv$MetaDF$SingleR_Labels)
             }  else {
+                 if(input$metaselect == "Unsup_Clust_BRtSNE"){
+                 MetaFac <- (envv$MetaDF$Clust_tSNECSBR)
+
+              } else if(input$metaselect == "EXP.ID"){
+                MetaFac <- (envv$MetaDF$EXP.ID)
+                
+              } else {
+                
+              }
   
                 }
               }
@@ -729,7 +882,7 @@ observeEvent(input$loadSDA, {
 
   })
 
-  output$plot4 <- renderPlot({
+output$plot4 <- renderPlot({
 
     if(!is.null(envv$GeneLoadings)){
       tempDF <- as.data.frame(tDF())
@@ -782,7 +935,7 @@ observeEvent(input$loadSDA, {
 
   })
 
-  output$GOpos <- renderPlot({
+output$GOpos <- renderPlot({
 
     if(!is.null(envv$GO_data)){
       if(! (as.numeric(input$ComponentNtext) %in% envv$comps)){
@@ -798,7 +951,7 @@ observeEvent(input$loadSDA, {
   })
 
 
-  output$GOneg <- renderPlot({
+output$GOneg <- renderPlot({
 
     if(!is.null(envv$GO_data)){
       
@@ -812,7 +965,7 @@ observeEvent(input$loadSDA, {
 
   })
 
-  output$ChrLoc <- renderPlot({
+output$ChrLoc <- renderPlot({
 
     if(!is.null(envv$GeneLoadings)){
       if(! (as.numeric(input$ComponentNtext) %in% envv$comps)){
@@ -834,7 +987,7 @@ observeEvent(input$loadSDA, {
 
 
 
-  output$CellScoresAcross <- renderPlot({
+output$CellScoresAcross <- renderPlot({
     
     if(!is.null(envv$CellScores)){
       DTt <- ScoreAcrossDT()
@@ -847,7 +1000,7 @@ observeEvent(input$loadSDA, {
         print("No Comp")
       } else {
         
-        print(head(DTt))
+        # print(head(DTt))
         
         lims <- quantile(asinh(envv$CellScores[, paste0("SDA_", ComponentN)]^3), c(0.01, 0.99))
         
@@ -877,90 +1030,107 @@ observeEvent(input$loadSDA, {
 
   })
 
-  # output$messageMenu <- renderMenu({
-  #   # Code to generate each of the messageItems here, in a list. This assumes
-  #   # that messageData is a data frame with two columns, 'from' and 'message'.
-  #   msgs <- apply(messageData, 1, function(row) {
-  #     messageItem(from = row[["from"]], message = row[["message"]])
-  #   })
-  # 
-  #   # This is equivalent to calling:
-  #   #   dropdownMenu(type="messages", msgs[[1]], msgs[[2]], ...)
-  #   dropdownMenu(type = "messages", .list = msgs)
-  # })
-  # 
-  # output$plot5 <- renderPlot({
-  #   # N = total number of genes (usually not entire genome, since many have unk func)
-  #   N=8025
-  #   # k = number of genes submitted, top 100
-  #   k = 40 #100 #needs stats thinking and adjustment to improve enrichment calls # maybe change to dynamically genes sumbited and in universe/data
-  # 
-  #   GeneSet <- input$GeneSet
-  #   if(length(grep(",", GeneSet)) == 0){
-  # 
-  #     if(length(grep('"', GeneSet)) + length(grep("'", GeneSet))>0) {
-  #       GeneSet <- unlist(strsplit(gsub("'", '', gsub('"', '', GeneSet)), " "))
-  #     } else {
-  #       GeneSet <- unlist(strsplit(GeneSet, " "))
-  #     }
-  # 
-  #     #print(GeneSet)
-  #   }else {
-  #     GeneSet <- (unlist(strsplit(gsub(" ", "", gsub("'", '', gsub('"', '', GeneSet))), ",")))
-  #     #print(GeneSet)
-  #   }
-  # 
-  #   print("length of your genes:")
-  #   print(length(GeneSet))
-  #   GeneSet <- GeneSet[GeneSet %in% colnames(envv$GeneLoadings[,])]
-  #   print("length of your genes in this dataset:")
-  #   print(length(GeneSet))
-  # 
-  #   plotEnrich(GeneSetsDF=SDA_TopNpos,
-  #              GeneVec = GeneSet,
-  #              plotTitle="Gene-set enrichment\n SDA top 40 pos loadings\n Cust. Input. genes \n Hypergeometric test: * adj.p < 0.01",
-  #              xLab = "SDA Comps",
-  #              N=N,
-  #              k=k)
-  # 
-  # 
-  # })
-  # 
-  # output$plot6 <- renderPlot({
-  #   # N = total number of genes (usually not entire genome, since many have unk func)
-  #   N=8025
-  #   # k = number of genes submitted, top 100
-  #   k = 40 #100, correction needed
-  #   GeneSet <- input$GeneSet
-  # 
-  # 
-  #   if(length(grep(",", GeneSet)) == 0){
-  # 
-  #     if(length(grep('"', GeneSet)) + length(grep("'", GeneSet))>0) {
-  #       GeneSet <- unlist(strsplit(gsub("'", '', gsub('"', '', GeneSet)), " "))
-  #     } else {
-  #       GeneSet <- unlist(strsplit(GeneSet, " "))
-  #     }
-  # 
-  #     #print(GeneSet)
-  #   }else {
-  #     GeneSet <- (unlist(strsplit(gsub(" ", "", gsub("'", '', gsub('"', '', GeneSet))), ",")))
-  #     #print(GeneSet)
-  #   }
-  # 
-  #   GeneSet <- GeneSet[GeneSet %in% colnames(envv$GeneLoadings[,])]
-  # 
-  # 
-  #   plotEnrich(GeneSetsDF=SDA_TopNneg,
-  #              GeneVec = GeneSet,
-  #              plotTitle="Gene-set enrichment\n SDA top 40 neg loadings\n Cust. Input. genes \n Hypergeometric test: * adj.p < 0.01",
-  #              xLab = "SDA Comps",
-  #              N=N,
-  #              k=k)
-  # 
-  # 
-  # })
+
+GEx <- reactive({
   
+  if(!is.null(envv$MetaDF)){
+    
+    if(input$metaselect_tab2 == "SubjectId") {
+      MetaFac <- (envv$MetaDF$SubjectId)
+    } else {
+      if(input$metaselect_tab2 == "SampleDate"){
+        MetaFac <- (envv$MetaDF$SampleDate)
+      } else {
+        if(input$metaselect_tab2 == "BarcodePrefix"){
+          MetaFac <- (envv$MetaDF$BarcodePrefix)
+        } else {
+          if(input$metaselect_tab2 == "SingleR_Labels"){
+            MetaFac <- (envv$MetaDF$SingleR_Labels)
+          }  else {
+            if(input$metaselect_tab2 == "Unsup_Clust_BRtSNE"){
+              MetaFac <- (envv$MetaDF$Clust_tSNECSBR)
+              
+            } else if(input$metaselect_tab2 == "EXP.ID"){
+              MetaFac <- (envv$MetaDF$EXP.ID)
+              
+            } else {
+              
+            }
+            
+          }
+          
+          
+        }
+      }
+    }
+    
+  
+  
+ 
+  if(input$Genetext_tab2 %in% colnames(envv$GeneLoadings)){
+    # envv$GeneLoadings[,"PRM1"]
+    GeneExpr <- envv$CellScores %*% envv$GeneLoadings[,as.character(input$Genetext_tab2)]
+  } else {
+    GeneExpr <- envv$CellScores %*% rep(0, nrow(envv$GeneLoadings))
+    
+  }
+  
+  GeneExpr <- as.data.frame(GeneExpr)
+  GeneExpr$barcode <- rownames(GeneExpr)
+  GeneExpr<- GeneExpr[rownames(envv$MetaDF), ]
+  GeneExpr$MetaFac <- MetaFac
+  GeneExpr <- GeneExpr[,-2]
+  colnames(GeneExpr) <- c("gene", "meta")
+  
+  tempCom <- combn(levels(factor(GeneExpr$meta)),2)
+  
+  my_comparisons <- lapply(1:ncol(tempCom), function(xN){
+    c(tempCom[1,xN], tempCom[2,xN])
+  })
+  
+  return(list(GeneExpr = GeneExpr, my_comparisons = my_comparisons))
+  }
+})
+
+output$GeneExprSigMeta <- renderPlot({
+  
+  GeneExpr <- GEx()$GeneExpr
+  my_comparisons <- GEx()$my_comparisons
+  
+  
+  
+  # CellType = input$celltypeselect
+  CellType = ""
+  
+  
+  
+  
+  TestName = "Wilcox Rank Sum"
+  
+  
+  
+  ggboxplot(GeneExpr, x = "meta", y = "gene", palette = col_vector,
+            add = "jitter", col="meta", repel=T, label.rectangle=T) + 
+    # stat_compare_means(comparisons = my_comparisons, method = "wilcox.test") +      # Add global p-value
+    stat_compare_means(comparisons = my_comparisons, 
+                       label = "p.signif", method = "wilcox.test",
+                       ref.group = "0.5") +
+    theme_bw() + 
+    ggtitle( paste0(as.character(input$Genetext2), " expression :: ", TestName, " test :: ", CellType)) + 
+    xlab("") + ylab(as.character(input$Genetext2))
+  
+  
+  
+  
+})
+
+
+
+
+
+
+
+
   
 }
 
